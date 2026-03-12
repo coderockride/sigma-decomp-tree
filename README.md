@@ -75,7 +75,7 @@ Admin Portal → **Account** → **Custom Plugins** → **Add**
 | Field | Value |
 |---|---|
 | Name | Decomposition Tree |
-| Production URL | `https://coderockride.github.io/sigma` |
+| Production URL | `https://coderockride.github.io/sigma-decomp-tree` |
 | Development URL | `http://localhost:3000` |
 
 ---
