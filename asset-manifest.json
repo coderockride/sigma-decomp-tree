@@ -1,15 +1,15 @@
 {
   "files": {
     "main.css": "/sigma-decomp-tree/static/css/main.e6c13ad2.css",
-    "main.js": "/sigma-decomp-tree/static/js/main.0c0961cc.js",
+    "main.js": "/sigma-decomp-tree/static/js/main.2d6b9afb.js",
     "static/js/453.ad8be464.chunk.js": "/sigma-decomp-tree/static/js/453.ad8be464.chunk.js",
     "index.html": "/sigma-decomp-tree/index.html",
     "main.e6c13ad2.css.map": "/sigma-decomp-tree/static/css/main.e6c13ad2.css.map",
-    "main.0c0961cc.js.map": "/sigma-decomp-tree/static/js/main.0c0961cc.js.map",
+    "main.2d6b9afb.js.map": "/sigma-decomp-tree/static/js/main.2d6b9afb.js.map",
     "453.ad8be464.chunk.js.map": "/sigma-decomp-tree/static/js/453.ad8be464.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.e6c13ad2.css",
-    "static/js/main.0c0961cc.js"
+    "static/js/main.2d6b9afb.js"
   ]
 }
