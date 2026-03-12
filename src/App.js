@@ -524,7 +524,7 @@ function buildInitialCollapsed(root) {
   return keys;
 }
 
-function TreeCanvas({ root, config, columns }) {
+function TreeCanvas({ root, config, columns, onReset }) {
   // Initialise collapsed so all nodes below depth-1 start collapsed.
   // useState(() => ...) uses a lazy initialiser — the function only runs once
   // on mount, not on every re-render.
@@ -653,13 +653,35 @@ function TreeCanvas({ root, config, columns }) {
         {visibleNodes.length} nodes
       </div>
 
-      {/* ── Version badge (bottom-left) */}
-      <div style={{
-        position: "absolute", bottom: 14, left: 14, zIndex: 10,
-        backgroundColor: "#fff", border: "1px solid #e2e8f0",
-        borderRadius: 6, padding: "4px 10px", fontSize: 11, color: "#94a3b8", fontWeight: 500,
-      }}>
-        {VERSION}
+      {/* ── Version badge + refresh button (bottom-left) */}
+      <div style={{ position: "absolute", bottom: 14, left: 14, zIndex: 10, display: "flex", gap: 6 }}>
+        <div style={{
+          backgroundColor: "#fff", border: "1px solid #e2e8f0",
+          borderRadius: 6, padding: "4px 10px", fontSize: 11, color: "#94a3b8", fontWeight: 500,
+        }}>
+          {VERSION}
+        </div>
+        {/* Refresh button — clears all React state and forces a full remount.
+            Useful if stale cached state causes orphaned nodes or layout glitches. */}
+        <button
+          onClick={onReset}
+          title="Reset view"
+          style={{
+            backgroundColor: "#fff", border: "1px solid #e2e8f0",
+            borderRadius: 6, padding: "4px 10px", fontSize: 11,
+            color: "#64748b", fontWeight: 500, cursor: "pointer",
+            display: "flex", alignItems: "center", gap: 5,
+            boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#f8fafc"}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#fff"}
+        >
+          {/* Circular arrow icon */}
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M10.5 6a4.5 4.5 0 1 1-1.5-3.3L10.5 1v3.5H7"/>
+          </svg>
+          Reset
+        </button>
       </div>
 
       {/* ── Zoom +/− buttons (bottom-right, left of node count) ──────────── */}
@@ -819,6 +841,13 @@ export default function App() {
   const elementData = useElementData(config?.source);
   const columns     = useElementColumns(config?.source);
 
+  // resetKey is incremented when the user clicks the Refresh button.
+  // Passing it as React's `key` prop to TreeCanvas forces a full unmount
+  // and remount, wiping all internal state (collapsed, pan, zoom, animation
+  // tracking). This is the nuclear option for clearing any stale cache.
+  const [resetKey, setResetKey] = useState(0);
+  const handleReset = useCallback(() => setResetKey((k) => k + 1), []);
+
   const tree = useMemo(() => {
     if (!elementData || !config?.level1 || !config?.valueColumn) return null;
 
@@ -857,7 +886,7 @@ export default function App() {
 
   return (
     <div style={wrap}>
-      <TreeCanvas root={tree} config={config} columns={columns} />
+      <TreeCanvas key={resetKey} root={tree} config={config} columns={columns} onReset={handleReset} />
     </div>
   );
 }
