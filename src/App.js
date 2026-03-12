@@ -491,17 +491,47 @@ function NodeCard({ node, totalValue, levelName, color, collapsed, entering, exi
 // zoom are handled purely in CSS — we don't need to recompute node positions
 // when the user drags or scrolls, which keeps interactions smooth.
 // ─────────────────────────────────────────────────────────────────────────────
-function TreeCanvas({ root, config, columns }) {
-  const [collapsed, setCollapsed] = useState(new Set()); // keys of collapsed nodes
-  const [tooltip, setTooltip]     = useState(null);      // { node, x, y } or null
-  const [pan, setPan]             = useState({ x: 60, y: 60 }); // canvas offset in px
-  const [zoom, setZoom]           = useState(1);          // zoom scale factor
+// Plugin version — bump this string whenever you deploy a new version.
+// It's displayed in the bottom-left corner of the canvas so you can confirm
+// the latest build is live after deploying.
+const VERSION = "v1.3.0";
 
-  const dragging    = useRef(false);       // true while the user is dragging the canvas
-  const dragStart   = useRef(null);        // { x, y } of the drag origin
-  const canvasRef   = useRef(null);        // ref to the outer container div (for wheel events)
-  // Tracks which node keys were visible on the previous render, used by AnimatedNodes.
+// Walks the entire tree and returns a Set of nodeKeys for every non-root node
+// that has children. Used to initialise collapsed state so only the root's
+// direct children are visible on first load, and all deeper nodes start collapsed.
+function buildInitialCollapsed(root) {
+  const keys = new Set();
+  function walk(node, isRoot) {
+    if (!isRoot && node.children.length > 0) {
+      keys.add(nodeKey(node));
+    }
+    node.children.forEach((c) => walk(c, false));
+  }
+  walk(root, true);
+  return keys;
+}
+
+function TreeCanvas({ root, config, columns }) {
+  // Initialise collapsed so all nodes below depth-1 start collapsed.
+  // useState(() => ...) uses a lazy initialiser — the function only runs once
+  // on mount, not on every re-render.
+  const [collapsed, setCollapsed] = useState(() => buildInitialCollapsed(root));
+  const [tooltip, setTooltip]     = useState(null);
+  const [pan, setPan]             = useState({ x: 60, y: 60 });
+  const [zoom, setZoom]           = useState(1);
+
+  const dragging    = useRef(false);
+  const dragStart   = useRef(null);
+  const canvasRef   = useRef(null);
   const prevKeysRef = useRef(new Set([nodeKey(root)]));
+
+  // When root changes (user changes data source or adds a level column),
+  // reset collapsed to the fresh default so stale keys from the old tree
+  // don't cause orphaned nodes to appear or disappear unexpectedly.
+  useEffect(() => {
+    setCollapsed(buildInitialCollapsed(root));
+    prevKeysRef.current = new Set([nodeKey(root)]);
+  }, [root]);
 
   // Toggle a node between collapsed and expanded.
   // useCallback prevents this function from being recreated on every render,
@@ -608,6 +638,15 @@ function TreeCanvas({ root, config, columns }) {
         borderRadius: 6, padding: "4px 10px", fontSize: 11, color: "#64748b", fontWeight: 500,
       }}>
         {visibleNodes.length} nodes
+      </div>
+
+      {/* ── Version badge (bottom-left) */}
+      <div style={{
+        position: "absolute", bottom: 14, left: 14, zIndex: 10,
+        backgroundColor: "#fff", border: "1px solid #e2e8f0",
+        borderRadius: 6, padding: "4px 10px", fontSize: 11, color: "#94a3b8", fontWeight: 500,
+      }}>
+        {VERSION}
       </div>
 
       {/* ── Zoom +/− buttons (bottom-right, left of node count) ──────────── */}
