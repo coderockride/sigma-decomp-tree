@@ -90,8 +90,16 @@ function fmt(val) {
 // that include the human-readable column name.
 // This helper does the lookup and falls back to the raw ID if no match is found.
 function resolveColName(columnId, columns) {
-  if (!columnId || !columns) return columnId || "";
-  return columns[columnId]?.name || columnId;
+  if (!columnId) return "";
+  // Try to resolve from column metadata first (the proper way)
+  if (columns && columns[columnId]?.name) return columns[columnId].name;
+  // Fallback: if we got a raw Sigma column ID like "inode-xxx/COLUMN_NAME",
+  // extract the part after the last "/" and convert underscores to spaces.
+  // This gives a readable name even if column metadata hasn't loaded yet.
+  if (typeof columnId === "string" && columnId.includes("/")) {
+    return columnId.split("/").pop().replace(/_/g, " ");
+  }
+  return columnId;
 }
 
 // Returns the display name for a given depth level:
@@ -155,14 +163,17 @@ function buildTree(rows, levelKeys, valueKey) {
 
   // Convert the Map-based structure into a plain nested object tree.
   // Children at each level are sorted largest-to-smallest by value.
-  function toNode(n) {
+  // _path stores the full ancestor chain so nodeKey() produces unique keys
+  // even when the same label appears under different parents at the same depth.
+  function toNode(n, parentPath) {
+    const path = parentPath ? parentPath + "§" + n.label : n.label;
     const children = Array.from(n.childMap.values())
-      .map(toNode)
+      .map((c) => toNode(c, path))
       .sort((a, b) => b.value - a.value);
-    return { label: n.label, value: n.value, depth: n.depth, rowCount: n.rowCount, children };
+    return { label: n.label, value: n.value, depth: n.depth, rowCount: n.rowCount, children, _path: path };
   }
 
-  return toNode(ROOT);
+  return toNode(ROOT, "");
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -190,10 +201,12 @@ function collectVisible(root, collapsed) {
   return result;
 }
 
-// Produces a stable string key for a node, used to identify it in Sets/Maps.
-// We combine label + depth because the same label could appear at different levels.
+// Produces a stable string key for a node using its FULL ancestor path.
+// This prevents key collisions when the same label appears at the same depth
+// under different parents (e.g. "Sales" under "North America" vs "EMEA").
+// _path is assigned during buildTree as a chain of ancestor labels.
 function nodeKey(node) {
-  return node.label + "§" + node.depth;
+  return node._path;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
