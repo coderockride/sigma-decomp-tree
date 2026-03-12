@@ -1,70 +1,111 @@
-# Getting Started with Create React App
+# Sigma Decomposition Tree v2
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A custom Sigma Computing plugin that renders data as an interactive horizontal decomposition tree — with curved connectors, a pannable/zoomable canvas, hover tooltips, and collapsible branches.
 
-## Available Scripts
+Live URL: https://coderockride.github.io/sigma
 
-In the project directory, you can run:
+---
 
-### `npm start`
+## What it looks like
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- A dotted canvas with a horizontal node-link layout — root on the left, children expanding right
+- Curved bezier connectors between nodes, colour-coded by depth level
+- Column type labels above each tier (e.g. REGION, SEGMENT, CATEGORY)
+- Breadcrumb trail top-left showing the active drill path
+- Node count badge bottom-right
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+---
 
-### `npm test`
+## Interactions
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+| Action | How |
+|---|---|
+| **Collapse / expand** a branch | Click any node (or its +/− badge) |
+| **Pan** the canvas | Click and drag the background |
+| **Zoom** | Scroll wheel, or use the +/− buttons bottom-right |
+| **Tooltip** | Hover any node to see value, % of total, row count, and child count |
 
-### `npm run build`
+---
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## Editor panel configuration
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+| Field | Type | Description |
+|---|---|---|
+| **Data Source** | Element | The Sigma table or chart to read from |
+| **Level 1** | Column | Top-level dimension (e.g. Region) |
+| **Level 2** | Column | Second dimension (e.g. Segment) |
+| **Level 3–6** | Column | Optional further drill-downs |
+| **Value Column** | Numeric column | The measure to sum (e.g. Revenue) |
+| **Chart Title** | Text | Optional — not currently rendered on canvas |
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+Add level columns in the order you want them to appear left to right. Unused levels can be left empty. Aggregation happens within each parent context, so "Sales" under "North America" and "Sales" under "EMEA" remain separate nodes.
 
-### `npm run eject`
+---
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+## Local development
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+**Prerequisites:** Node.js 18+, a Sigma account with plugin developer permissions, and the Sigma Plugin Dev Playground registered by your org admin pointing to `http://localhost:3000`.
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+```bash
+# Install dependencies
+npm install
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+# Start dev server on port 3000
+npm start
+```
 
-## Learn More
+In Sigma: open any workbook → Edit → **+** → Plugins → **Sigma Plugin Dev Playground**.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+---
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Deploying updates
 
-### Code Splitting
+```bash
+npm run deploy
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+Builds the app and pushes to the `gh-pages` branch. The live URL updates within a minute or two.
 
-### Analyzing the Bundle Size
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+## Registering in Sigma
 
-### Making a Progressive Web App
+Admin Portal → **Account** → **Custom Plugins** → **Add**
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+| Field | Value |
+|---|---|
+| Name | Decomposition Tree |
+| Production URL | `https://coderockride.github.io/sigma` |
+| Development URL | `http://localhost:3000` |
 
-### Advanced Configuration
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+## Project structure
 
-### Deployment
+```
+decomptree/
+├── public/
+├── src/
+│   ├── App.js        # All plugin logic, layout, and rendering
+│   └── index.js      # React entry point
+├── package.json
+└── README.md
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+---
 
-### `npm run build` fails to minify
+## How it works
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+The plugin uses Sigma's `useConfig()` and `useElementData()` hooks to pull live data from the workbook. Each row is walked down the configured level columns to build a nested path (e.g. `Europe → Enterprise → Software`). Rows sharing the same path prefix are summed together.
+
+Layout is computed in two passes: first collecting all visible nodes into depth-based columns, then assigning x/y coordinates. Collapsed branches are excluded from layout so the canvas reflows cleanly. Curved SVG bezier paths are drawn between each parent and child using the midpoint as both control points, giving the smooth S-curve connectors.
+
+---
+
+## Dependencies
+
+| Package | Role |
+|---|---|
+| `@sigmacomputing/plugin` | Sigma Plugin API (data & config hooks) |
+| `react` / `react-dom` | UI framework |
+| `react-scripts` | CRA build tooling |
